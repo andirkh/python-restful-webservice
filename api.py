@@ -1,5 +1,11 @@
-from flask import Flask
+from flask import Flask, request, jsonify
+# request: to get the request data
+# jsonify: return the information
 from flask_sqlalchemy import SQLAlchemy
+import uuid
+# uuid: generate random public id
+from werkzeug.security import generate_password_hash, check_password_hash
+# hashing
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'thisissecret'
@@ -19,6 +25,7 @@ class User(db.Model):
 	id = db.Column(db.Integer, primary_key=True)
 	public_id = db.Column(db.String(50), unique=True)
 	name = db.Column(db.String(50))
+	password = db.Column(db.String(80))
 	admin = db.Column(db.Boolean)
 
 class Todo(db.Model):
@@ -38,9 +45,19 @@ def get_one_user():
 
 @app.route('/user', methods=['POST'])
 def create_user():
-	return ''
+	data = request.get_json()
+	#print(data)
 
-@app.route('/user/<user_id>'. methods=['PUT'])
+	hashed_password = generate_password_hash(data['password'], method='sha256')
+	#print(hashed_password)
+
+	new_user = User(public_id=str(uuid.uuid4()), name=data['name'], password=hashed_password, admin=False)
+	db.session.add(new_user)
+	db.session.commit()
+
+	return jsonify({'message': 'new user created'})
+
+@app.route('/user/<user_id>', methods=['PUT'])
 def promote_user():
 	return ''
 
