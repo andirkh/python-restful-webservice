@@ -72,6 +72,11 @@ def get_one_user(public_id):
 def create_user():
 	# Get the Input :
 	data = request.get_json()
+	# check same name :
+	user = User.query.filter_by(name=data['name']).first()
+	if user:
+		return jsonify({'message': 'please, use another username'})
+
 	hashed_password = generate_password_hash(data['password'], method='sha256')
 	# process :
 	new_user = User(public_id=str(uuid.uuid4()), name=data['name'], password=hashed_password, admin=False)
@@ -87,16 +92,23 @@ def promote_user(public_id):
 	user = User.query.filter_by(public_id=public_id).first()
 	if not user:
 		return jsonify({'message': 'No user found!'})
-	
+
 	# the update is very simple
 	user.admin = True
 	db.session.commit()
 
 	return jsonify({'message': 'The user has been promoted'})
 
-@app.route('/user/<user_id>', methods=['DELETE'])
-def delete_user():
-	return ''
+@app.route('/user/<public_id>', methods=['DELETE'])
+def delete_user(public_id):
+	user = User.query.filter_by(public_id=public_id).first()
+	if not user:
+		return jsonify({'message': 'No user found!'})
+	# this is how you delete fucking user:
+	db.session.delete(user)
+	db.session.commit()
+
+	return jsonify({'message': 'The user has been deleted'})
 
 if __name__ == '__main__':
 	app.run(debug=True, port=3002)
