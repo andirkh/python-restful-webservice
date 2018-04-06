@@ -9,22 +9,25 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'thisissecret'
+
 # create fucking sqlite database
-# then open python3
+# then build that db, open python3 in terminal
 # 	from api import db
 # 	db.create_all()
 # 	exit
+
 # check in sqlite3 todo.db
 # 	.tables
 # 	.exit
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///todo.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # create database model :
 class User(db.Model):
 	id = db.Column(db.Integer, primary_key=True)
 	public_id = db.Column(db.String(50), unique=True)
-	name = db.Column(db.String(50))
+	name = db.Column(db.String(50), unique=True)
 	password = db.Column(db.String(80))
 	admin = db.Column(db.Boolean)
 
@@ -35,9 +38,20 @@ class Todo(db.Model):
 	user_id = db.Column(db.Integer)
 
 # create fucking API :
-@app.route('/users', methods=['GET'])
+@app.route('/user', methods=['GET'])
 def get_all_users():
-	return ''
+	# process:
+	users = User.query.all()
+	output = []
+	for user in users:
+		user_data = {}
+		user_data['public_id'] = user.public_id
+		user_data['name'] = user.name
+		user_data['password'] = user.password
+		user_data['admin'] = user.admin
+		output.append(user_data)
+	# output
+	return jsonify({ 'users' : output})
 
 @app.route('/user/<user_id>', methods=['GET'])
 def get_one_user():
@@ -45,16 +59,16 @@ def get_one_user():
 
 @app.route('/user', methods=['POST'])
 def create_user():
+	# Get the Input :
 	data = request.get_json()
-	#print(data)
-
 	hashed_password = generate_password_hash(data['password'], method='sha256')
-	#print(hashed_password)
-
+	# process :
 	new_user = User(public_id=str(uuid.uuid4()), name=data['name'], password=hashed_password, admin=False)
+	# Output :
+	# save to database
 	db.session.add(new_user)
 	db.session.commit()
-
+	# Response Output 
 	return jsonify({'message': 'new user created'})
 
 @app.route('/user/<user_id>', methods=['PUT'])
@@ -66,4 +80,4 @@ def delete_user():
 	return ''
 
 if __name__ == '__main__':
-	app.run(debug=True)
+	app.run(debug=True, port=3002)
